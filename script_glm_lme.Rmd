@@ -1,0 +1,143 @@
+---
+title: "escape_cymatog"
+author: "fr"
+date: "2023-09-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(bbmle)
+library(cli)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(scales)
+library(car)
+library(lubridate)
+library(ggpubr)
+library(tidyverse)
+library(glmmTMB)
+library(viridis)
+library(slider)
+library(sjPlot)
+library(ggeffects)
+library(modelsummary)
+library(stats)
+library(lme4)
+
+
+setwd("C:/Users/Francesca/Documents/Project 4 - Schooling Escape Responses/cymatog")
+library(readxl)
+cym_data <- read_excel("rawdata_school1_lar_sm.xlsx")
+cym_data$latency_ms <- ifelse(is.na(cym_data$latency_ms), 0, cym_data$latency_ms )
+cym_data[cym_data == 0] <- NA
+show(cym_data)
+colnames(cym_data)
+model <- glm(latency_ms ~ role_assigned + distance_from_stimulus + size+ angle_between_fish_and_stimulus+distance_from_first_responder, data = cym_data, family = gaussian, na.action = na.exclude)
+summary(model)
+plot(model)
+
+
+
+# Installa il pacchetto ggplot2 se non è già installato
+# install.packages("ggplot2")
+
+# Carica il pacchetto ggplot2
+library(ggplot2)
+
+# Crea un dataframe con le previsioni del modello
+predictions <- data.frame(latency_ms = predict(model),
+                           size = cym_data$size,
+                           distance_from_stimulus = cym_data$distance_from_stimulus,
+                           angle_between_fish_and_stimulus = cym_data$angle_between_fish_and_stimulus)
+
+plot_data <- cym_data %>%
+  mutate(Predicted_Latency_ms = predict(model))  
+
+# Crea un grafico a dispersione (scatter plot) per visualizzare la relazione lineare
+# tra Latency_ms e ciascuna delle variabili predittive
+ggplot(plot_data, aes(x = Predicted_Latency_ms)) +
+  geom_point(aes(y = size, color = "Size"), alpha = 0.5) +
+  geom_point(aes(y = distance_from_stimulus, color = "Distance_from_Stimulus"), alpha = 0.5) +
+  geom_point(aes(y = angle_between_fish_and_stimulus, color = "Angle_Between_Fish_and_Stimulus"), alpha = 0.5) +
+  labs(x = "Predicted Latency_ms", y = "Predictors") +
+  ggtitle("Latency_ms and predictors") +
+  theme_minimal() +
+  scale_color_manual(values = c("Stimulus" = "blue", "Distance_from_Stimulus" = "red", "Angle_Between_Fish_and_Stimulus" = "green")) +
+  guides(color = guide_legend(title = "Predictors"))
+
+
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+
+```
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+
+
+# mixed model
+
+model_mixed <- lme(latency_ms ~ role_assigned + distance_from_stimulus + size + angle_between_fish_and_stimulus + distance_from_first_responder,
+                    random = ~ 1 | school,  # Supponendo che "school" sia la variabile di raggruppamento
+                    data = cym_data, na.action = na.exclude)
+                    
+                    
+                  
+predictions <- data.frame(predict(model_misto))
+
+colnames(predictions) <- "Predicted_Latency_ms"
+cym_data_with_predictions <- cbind(cym_data, predictions)
+variabili_predittive <- c("role_assigned", "distance_from_stimulus", "size", "angle_between_fish_and_stimulus", "distance_from_first_responder")
+
+# Loop per creare grafici a dispersione separati per ciascuna variabile predittiva
+for (var in variabili_predittive) {
+  plot_data <- cym_data_with_predictions
+  plot_data$Variable <- var
+  
+  p <- ggplot(plot_data, aes_string(x = "Predicted_Latency_ms", y = var)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE, color = "blue") +
+    labs(x = "Predicted Latency_ms", y = var) +
+    ggtitle(paste("Modello Misto: Predizioni vs.", var)) +
+    theme_minimal()
+  
+  print(p)
+}
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+
+
+
+
+# Esegui l'analisi del modello misto
+summary(model_misto)
+
+ggplot(model_misto, aes(x = Predicted_Latency_ms)) +
+  geom_point(aes(y = size, color = "Size"), alpha = 0.5) +
+  geom_point(aes(y = distance_from_stimulus, color = "Distance_from_Stimulus"), alpha = 0.5) +
+  geom_point(aes(y = angle_between_fish_and_stimulus, color = "Angle_Between_Fish_and_Stimulus"), alpha = 0.5) +
+  geom_smooth(method = "lm", formula = y ~ x, se = FALSE, color = "black") +  # Aggiunge una linea di tendenza
+  labs(x = "Predicted Latency_ms", y = "Predictors") +
+  ggtitle("Latency_ms and predictors") +
+  theme_minimal() +
+  scale_color_manual(values = c("Size" = "blue", "Distance_from_Stimulus" = "red", "Angle_Between_Fish_and_Stimulus" = "green")) +
+  guides(color = guide_legend(title = "Predictors"))
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
