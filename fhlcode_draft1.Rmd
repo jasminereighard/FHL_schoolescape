@@ -34,7 +34,11 @@ library(dplyr)
 library(car)
 library(MuMIn)
 library(fishualize)
-
+library(AER)
+library(stringr)
+library(corrr)
+library(ggcorrplot)
+library(FactoMineR)
 
 ```
 
@@ -49,7 +53,7 @@ cym_dat <- read.csv("data/rawdata_allcombinedSep28.csv")
 nnd_df <- read.csv("data/rawdata_combined_NND_9.28.csv")
 
 #spontaneous turns
-spon_turn <- read.csv("data/sp_turn_10-3-23.csv")
+spon_turn <- read.csv("data/sp_turn_10-9-23.csv")
 
 #categorize by s and w
 cym_dat$s_w_reactor <- ifelse(substr(cym_dat$responder, 1, 1) == "s", "s", "w")
@@ -74,13 +78,13 @@ cym_dat$stimulus <- as.factor(cym_dat$stimulus)
 #look at averages
 turnrate_result <- aggregate(turning_rate ~ size, data = spon_turn, FUN = mean)
 print(turnrate_result)
-#large 0.2821126
-#small 0.3856099
+#large 0.2243052
+#small 0.243546
 
 #Mann-Whitney test
 manwhit_spon <- wilcox.test(turning_rate ~ size, data = spon_turn)
 print(manwhit_spon) 
-# p-value is less than 0.05, conclusion: there is a statistically significant difference in the distributions of "turning_rate" between the two size.
+# p-value is less not less than 0.05, conclusion: there is no statistically significant difference in the distributions of "turning_rate" between the two size.
 
 
 spon_anova <- aov(turning_rate ~ size, data = spon_turn)
@@ -92,10 +96,6 @@ par(mfrow=c(2,2))
 plot(spon_anova)
 
 
-spon_turn_no_outliers <- read.csv("data/sp_turn_10-4-23_no_outliers.csv")
-
-manwhit_spon_noout <- wilcox.test(turning_rate ~ size, data = spon_turn_no_outliers)
-print(manwhit_spon_noout)
 
 #homogeneity of variances
 leveneTest(turning_rate ~ size, data = spon_turn)
@@ -103,8 +103,9 @@ leveneTest(turning_rate ~ size, data = spon_turn)
 t.test(turning_rate ~ size, data = spon_turn)
 
 
-
-
+avg_turnrate <- mean(spon_turn$turning_rate)
+print(avg_turnrate)
+#avg turn rate is .2321768
 ```
 
 ```{r}
@@ -113,7 +114,7 @@ t.test(turning_rate ~ size, data = spon_turn)
 
 cym_dat_frames <- read.csv("data/rawdata_allcombinedSep28_start_end.csv")
 cym_dat_frames <- cym_dat_frames %>% 
-  mutate(turning_duration = (frame_end - frame_st) * 4.17)
+  mutate(turning_duration = (frame_end - frame_st)/240 * 1000)
 
 #add turning duration to cym_dat df
 cym_dat$turning_duration <- cym_dat_frames$turning_duration
@@ -125,8 +126,8 @@ cym_dat <- cym_dat %>%
 #categorize responses
 
 cym_dat$response_type <- ifelse(
-  (cym_dat$size == "large" & cym_dat$turning_rate > 0.28) |
-  (cym_dat$size == "small" & cym_dat$turning_rate > 0.39),
+  (cym_dat$size == "large" & cym_dat$turning_rate > 0.22) |
+  (cym_dat$size == "small" & cym_dat$turning_rate > 0.24),
   "fast",
   "slow"
 )
@@ -156,11 +157,7 @@ ggplot(cym_dat,aes(x=turning_duration,y=turning_angle_absolute_value,color=size)
          theme_classic()
 
 
-ggplot(cym_dat, aes(x = SiteName, y = biomass_total, fill = SiteName)) +
-  geom_bar(stat = "identity") +
-  labs(x = "Site", y = "Total Biomass") +
-  ggtitle("Total Biomass per Site") +
-  scale_fill_fish_d(option = "Trimma_lantana")
+
 
 #visualize percent slow
 summary_table <- cym_dat %>%
@@ -186,10 +183,166 @@ ggplot(summary_table, aes(x = size, y = count, fill = response_type)) +
   theme_minimal()
 
 
+#scatter plot grouped by fast and slow
+
+ggplot(cym_dat,aes(x=turning_duration,y=turning_angle_absolute_value,color=response_type))+
+         geom_point()+
+         geom_smooth(method=lm,fullrange=TRUE,
+                  aes(color=response_type))+
+        scale_color_manual(name='Response Type',
+                     breaks=c('fast', 'slow'),
+                     values=c('large'='#E69F00', 'slow'='#0C7BDC'))+
+   theme(legend.title=element_text(size=14),
+       legend.text=element_text(size=14))+
+         theme_classic()
+
+
+
+```
+
+```{r}
+
+# Calculating NND for each responder within the same school and stimulus group
+#NAs come from two having the same nearest neighbor distance
+
+nnd_df <- nnd_df %>%
+  group_by(school, stimulus) %>%
+  mutate(
+    NND = sqrt((s_head_x - lag(s_head_x))^2 + (s_head_y - lag(s_head_y))^2)
+  ) %>%
+  ungroup()
+
+#If we want:
+# Replace NA values in the NND column with 0 
+#nnd_df$NND[is.na(nnd_df$NND)] <- 0
+
+cym_dat$NND <- nnd_df$NND
+
+#add nnd to wave df
+nnd_wave_dat <- merge(wave_dat, nnd_df[, c('school', 'stimulus', 'responder', 'NND')], 
+                         by = c('school', 'stimulus', 'responder'), 
+                         all.x = TRUE)
+
+
+
 ```
 
 
 ```{r}
+
+#ANCOVA
+ancova_mod <- aov(turning_rate ~ size + response_type, data = cym_dat)
+summary(ancova_mod)
+
+
+par(mfrow=c(2,2))
+plot(ancova_mod)
+
+wilcox.test(turning_rate ~ response_type, data = cym_dat)
+# p-value <2.2e-16, conclusion: there is a statistically significant difference in the distributions of "turning_rate" between the two response types.
+
+
+```
+
+```{r}
+#Only interested in fast responses, making new dataset excluding slow responses
+
+fast_dat <- cym_dat %>%
+  filter(response_type == "fast")
+
+#glm for fast
+mod_fast <- glm(latency_ms ~ s_w_reactor + distance_from_stimulus + size+ angle_between_fish_and_stimulus + distance_from_first_responder +NND, data = fast_dat, family=poisson, na.action = na.exclude)
+summary(mod_fast)
+par(mfrow=c(2,2))
+plot(mod_fast)
+
+#subsetting just the wave
+wave_dat_fast <- subset(fast_dat, substr(responder, 1, 1) == "w")
+
+#glm for wave
+glm_wave_fast <- glm(latency_ms ~ size+ angle_between_fish_and_stimulus+distance_from_first_responder +NND, data = wave_dat_fast, family=Gamma(link = "log"), na.action = na.exclude)
+summary(glm_wave_fast)
+par(mfrow=c(2,2))
+plot(glm_wave_fast)
+
+
+#taking out all insignificant variables
+glm_size_distfr <- glm(latency_ms ~ size + distance_from_first_responder , data = wave_dat_fast, family=Gamma(link = "log"))
+summary(glm_size_distfr)
+par(mfrow=c(2,2))
+plot(glm_size_distfr)
+#size is more significant
+
+#linear model for just the wave
+lm_wavedat_fast <- lm(latency_ms ~ size, data=wave_dat_fast)
+summary(lm_wavedat_fast)
+
+
+#normality
+shapiro.test(lm_wavedat_fast$residuals) 
+
+#homogeneity of variances
+bartlett.test(latency_ms ~ size, data=wave_dat_fast)
+
+wilcox.test(latency_ms ~ size, data = wave_dat_fast)
+
+
+
+```
+
+
+
+```{r}
+#Correlation and Principal Component Analysis 
+
+
+#new df with specified columns
+wave_fast_forPCA <- wave_dat_fast[, c("latency_ms", "s_w_reactor", "distance_from_stimulus", "size", "angle_between_fish_and_stimulus", "distance_from_first_responder","NND")]
+
+
+#make small 0 and large 1
+wave_fast_forPCA <- wave_fast_forPCA %>%
+  mutate(size_ID = ifelse(size == "small", 0, 1))
+
+
+
+#use sapply to make wave_dat_fast numeric
+
+wave_fast_new <- wave_fast_forPCA[sapply(wave_fast_forPCA, is.numeric)]
+
+#correlation
+wave_corr <- sapply(wave_fast_new[, setdiff(names(wave_fast_new), "latency_ms")], function(x) {
+  cor(wave_fast_new$latency_ms, x, method = "pearson")
+})
+print(wave_corr)
+
+
+
+```
+
+
+```{r}
+
+
+
+```
+
+
+```{r}
+#apprently glm with poisson is not good
+#doing a mixed effect model for fast responses
+
+#quick visualization 
+ggplot(wave_dat_fast) +
+  geom_point(aes(x = distance_from_first_responder, y = latency_ms, color = size)) +
+  geom_smooth(aes(x = distance_from_first_responder, y = latency_ms, color = size), method = "lm") +
+  scale_color_fish_d(option = "Trimma_lantana") 
+
+mix_mod1 <- glmer(latency_ms ~ distance_from_first_responder + (1 | size), data = wave_dat_fast, family = poisson)
+
+summary(mix_mod1)
+
+
 
 ```
 
@@ -206,60 +359,13 @@ mod1 <- glm(latency_ms ~ s_w_reactor + distance_from_stimulus + size+ angle_betw
 summary(mod1)
 plot(mod1)
 
-#anova for all combined
-lm_for_assum<-aov(latency_ms ~ size + distance_from_stimulus + distance_from_first_responder, data=cym_dat)
-
-summary(lm_for_assum)
-plot(lm_for_assum)
-
-
-#ANOVA model
-wave_lm_for_assum<-aov(latency_ms ~ size + distance_from_stimulus + distance_from_first_responder, data=wave_dat)
-
-summary(wave_lm_for_assum)
-shapiro.test(wave_lm_for_assum$residuals) 
-
-plot(wave_lm_for_assum)
-
-
-#linear model for just the wave
-lm_wavedat <- lm(latency_ms ~ size, data=wave_dat)
-summary(lm_wavedat)
-
-
-#normality
-shapiro.test(lm_wavedat$residuals) 
-
-#homogeneity of variances
-bartlett.test(latency_ms ~ size, data=wave_dat)
-
-#trying a log transformation 
-wave_dat$log_latency_ms <- log(wave_dat$latency_ms)
-
-log_lm_wavedat <- lm(log_latency_ms ~ size, data=wave_dat)
-
-
-#re-try
-shapiro.test(log_lm_wavedat$residuals) #passed
-bartlett.test(log_latency_ms ~ size, data=wave_dat)
-
-#shapiro on whole data
-lm_all <- lm(latency_ms ~ size, data=cym_dat)
-summary(lm_all)
-shapiro.test(lm_all$residuals) 
-
-#log transform data on all data
-cym_dat$log_latency_ms <- log(cym_dat$latency_ms)
-
-#failed bc 0
-log_lm_cymdat <- lm(log_latency_ms ~ size, data=cym_dat)
-
-
-#log transformed glm 
-
-mod1 <- glm(latency_ms ~ s_w_reactor + distance_from_stimulus + size+ angle_between_fish_and_stimulus+distance_from_first_responder, data = cym_dat, family = gaussian, na.action = na.exclude)
+#basic glm
+size_glm <- glm(latency_ms ~ s_w_reactor + distance_from_stimulus + size+ angle_between_fish_and_stimulus+distance_from_first_responder, data = cym_dat, family = gaussian, na.action = na.exclude)
 summary(mod1)
 plot(mod1)
+
+
+
 
 ```
 
@@ -297,62 +403,9 @@ ggplt+scale_color_manual(name='Size',
 
 ```
 
-```{r}
 
-# Calculating NND for each responder within the same school and stimulus group
-#NAs come from two having the same nearest neighbor distance
-
-nnd_df <- nnd_df %>%
-  group_by(school, stimulus) %>%
-  mutate(
-    NND = sqrt((s_head_x - lag(s_head_x))^2 + (s_head_y - lag(s_head_y))^2)
-  ) %>%
-  ungroup()
-
-#If we want:
-# Replace NA values in the NND column with 0 
-#nnd_df$NND[is.na(nnd_df$NND)] <- 0
-
-cym_dat$NND <- nnd_df$NND
-
-#add nnd to wave df
-nnd_wave_dat <- merge(wave_dat, nnd_df[, c('school', 'stimulus', 'responder', 'NND')], 
-                         by = c('school', 'stimulus', 'responder'), 
-                         all.x = TRUE)
-
-#new glm with NND 
-nnd_wave_glm <- glm(log_latency_ms ~ + distance_from_stimulus + size+ angle_between_fish_and_stimulus+distance_from_first_responder + NND, data = nnd_wave_dat, family = gaussian, na.action = na.exclude)
-summary(nnd_wave_glm)
-plot(mod1)
-
-#glm on wave
-mod_NND <- glm(log_latency_ms ~ + distance_from_stimulus + size+ angle_between_fish_and_stimulus+distance_from_first_responder + NND, data = wave_dat, family = gaussian, na.action = na.exclude)
-summary(mod_NND)
-plot(mod1)
-
-```
 
 ```{r}
-predictions <- data.frame(latency_ms = predict(model),
-                           size = cym_data$size,
-                           distance_from_stimulus = cym_data$distance_from_stimulus,
-                           angle_between_fish_and_stimulus = cym_data$angle_between_fish_and_stimulus)
-
-plot_data <- cym_data %>%
-  mutate(Predicted_Latency_ms = predict(model))  
-
-# Crea un grafico a dispersione (scatter plot) per visualizzare la relazione lineare
-# tra Latency_ms e ciascuna delle variabili predittive
-ggplot(plot_data, aes(x = Predicted_Latency_ms)) +
-  geom_point(aes(y = size, color = "Size"), alpha = 0.5) +
-  geom_point(aes(y = distance_from_stimulus, color = "Distance_from_Stimulus"), alpha = 0.5) +
-  geom_point(aes(y = angle_between_fish_and_stimulus, color = "Angle_Between_Fish_and_Stimulus"), alpha = 0.5) +
-  labs(x = "Predicted Latency_ms", y = "Predictors") +
-  ggtitle("Latency_ms and predictors") +
-  theme_minimal() +
-  scale_color_manual(values = c("Stimulus" = "blue", "Distance_from_Stimulus" = "red", "Angle_Between_Fish_and_Stimulus" = "green")) +
-  guides(color = guide_legend(title = "Predictors"))
-
 
 ```
 
@@ -361,68 +414,4 @@ ggplot(plot_data, aes(x = Predicted_Latency_ms)) +
 
 ```{r}
 
-
-sch2_dat <- read.csv("data/latency_dis.csv")
-head(sch2_dat)
-
-franc_dat <- read.csv("data/data_latencyfranc.csv")
-
-
-
-#filter out only w reactors
-w_dat <- subset(sch2_dat, substr(Reactor, 1, 1) == "w")
-
-#writing csv to take out just wave reactions 
-write.csv(w_dat, "data/jas_wave", row.names = FALSE)
-
-#merge both dfs
-dat <- read.csv("data/combined_dat.csv")
-
-#categorize by s and w
-sch2_dat$s_w_reactor <- ifelse(substr(sch2_dat$Reactor, 1, 1) == "s", "s", "w")
-
-mod <- aov(ms_w ~size, data=dat) 
-summary(mod)
-
-lm_dat <- lm(ms_w ~ size, data=dat)
-summary(lm_dat)
-
-
-
-#combined data 9.21
-
-dat2 <- read.csv("data/combined_dat2.csv")
-
-lm_dat2 <- lm(ms_w ~ size, data=dat2)
-summary(lm_dat2)
-
-#graph
-ggplot(dat2) +
-  geom_point(aes(x = ColonySA, y = ColonyVol, color = GrowthForm)) +
-  geom_smooth(aes(x = ColonySA, y = ColonyVol, color = GrowthForm), method = "lm") +
-  scale_x_continuous(trans = "log10") +
-  scale_y_continuous(trans = "log10") +
-  scale_color_fish_d(option = "Trimma_lantana") 
-
-
 ```
-
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
