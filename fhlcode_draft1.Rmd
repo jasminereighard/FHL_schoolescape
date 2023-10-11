@@ -2,8 +2,10 @@
 title: "FHL_code_draft1"
 author: "Jasmine Reighard"
 date: "2023-09-20"
-output: html_document
-editor_options: 
+output:
+  word_document: default
+  html_document: default
+editor_options:
   chunk_output_type: console
 ---
 
@@ -39,6 +41,7 @@ library(stringr)
 library(corrr)
 library(ggcorrplot)
 library(FactoMineR)
+library(MASS)
 
 ```
 
@@ -94,7 +97,7 @@ plot(spon_anova)
 shapiro.test(spon_anova$residuals)
 par(mfrow=c(2,2))
 plot(spon_anova)
-
+#normal and homogeneity pass
 
 
 #homogeneity of variances
@@ -106,6 +109,11 @@ t.test(turning_rate ~ size, data = spon_turn)
 avg_turnrate <- mean(spon_turn$turning_rate)
 print(avg_turnrate)
 #avg turn rate is .2321768
+
+
+
+
+
 ```
 
 ```{r}
@@ -223,7 +231,16 @@ nnd_wave_dat <- merge(wave_dat, nnd_df[, c('school', 'stimulus', 'responder', 'N
                          by = c('school', 'stimulus', 'responder'), 
                          all.x = TRUE)
 
+#average NND 
+avgNND_result <- aggregate(NND ~ size, data = cym_dat, FUN = function(x) mean(x, na.rm = TRUE))
+print(avgNND_result)
 
+manwhit_NND <- wilcox.test(NND ~ size, data = cym_dat)
+print(manwhit_NND) 
+#they are significantly different from each other and further apart!  
+
+boxplot(NND ~ size, data = cym_dat, main = "Boxplot of NND by Size",
+        xlab = "Size", ylab = "NND")
 
 ```
 
@@ -240,6 +257,7 @@ plot(ancova_mod)
 
 wilcox.test(turning_rate ~ response_type, data = cym_dat)
 # p-value <2.2e-16, conclusion: there is a statistically significant difference in the distributions of "turning_rate" between the two response types.
+
 
 
 ```
@@ -265,6 +283,7 @@ summary(glm_wave_fast)
 par(mfrow=c(2,2))
 plot(glm_wave_fast)
 
+with(summary(glm_wave_fast), 1 - deviance/null.deviance)
 
 #taking out all insignificant variables
 glm_size_distfr <- glm(latency_ms ~ size + distance_from_first_responder , data = wave_dat_fast, family=Gamma(link = "log"))
@@ -272,6 +291,18 @@ summary(glm_size_distfr)
 par(mfrow=c(2,2))
 plot(glm_size_distfr)
 #size is more significant
+
+#calculate McFadden's R-squared for model for size and distance from first responder glm
+with(summary(glm_size_distfr), 1 - deviance/null.deviance)
+
+
+glm_size <- glm(latency_ms ~ size, data = wave_dat_fast, family=Gamma(link = "log"))
+summary(glm_size)
+par(mfrow=c(2,2))
+plot(glm_size)
+
+with(summary(glm_size), 1 - deviance/null.deviance)
+
 
 #linear model for just the wave
 lm_wavedat_fast <- lm(latency_ms ~ size, data=wave_dat_fast)
@@ -329,8 +360,6 @@ print(wave_corr)
 
 
 ```{r}
-#apprently glm with poisson is not good
-#doing a mixed effect model for fast responses
 
 #quick visualization 
 ggplot(wave_dat_fast) +
@@ -338,44 +367,32 @@ ggplot(wave_dat_fast) +
   geom_smooth(aes(x = distance_from_first_responder, y = latency_ms, color = size), method = "lm") +
   scale_color_fish_d(option = "Trimma_lantana") 
 
-mix_mod1 <- glmer(latency_ms ~ distance_from_first_responder + (1 | size), data = wave_dat_fast, family = poisson)
 
-summary(mix_mod1)
-
-
-
-```
-
-
-```{r}
-
-#glm
-mod1 <- glm(latency_ms ~ s_w_reactor + distance_from_stimulus + size+ angle_between_fish_and_stimulus+distance_from_first_responder, data = cym_dat, family = gaussian, na.action = na.exclude)
-summary(mod1)
-plot(mod1)
-
-#take out other variables
-mod1 <- glm(latency_ms ~ s_w_reactor + distance_from_stimulus + size+ angle_between_fish_and_stimulus+distance_from_first_responder, data = cym_dat, family = gaussian, na.action = na.exclude)
-summary(mod1)
-plot(mod1)
-
-#basic glm
-size_glm <- glm(latency_ms ~ s_w_reactor + distance_from_stimulus + size+ angle_between_fish_and_stimulus+distance_from_first_responder, data = cym_dat, family = gaussian, na.action = na.exclude)
-summary(mod1)
-plot(mod1)
-
-
+ggplot(cym_dat,aes(x=turning_duration,y=turning_angle_absolute_value,color=response_type))+
+         geom_point()+
+         geom_smooth(method=lm,fullrange=TRUE,
+                  aes(color=response_type))+
+        scale_color_manual(name='Response Type',
+                     breaks=c('fast', 'slow'),
+                     values=c('large'='#E69F00', 'slow'='#0C7BDC'))+
+   theme(legend.title=element_text(size=14),
+       legend.text=element_text(size=14))+
+         theme_classic()
 
 
 ```
+
+
+
+
 
 ```{r}
 
 # Predict the values using the fitted model
-predicted_values <- predict(mod1, type = "response")
+predicted_values <- predict(glm_size_distfr, type = "response")
 
 # Create a data frame for plotting
-plot_data <- data.frame(Observed = cym_dat$latency_ms, Predicted = predicted_values)
+plot_data <- data.frame(Observed = wave_dat_fast$latency_ms, Predicted = predicted_values)
 
 #scatterplot
 ggplot(plot_data, aes(x = Observed, y = Predicted)) +
@@ -406,6 +423,22 @@ ggplt+scale_color_manual(name='Size',
 
 
 ```{r}
+
+#plots 
+
+ggplot(wave_dat_fast,aes(x=distance_from_first_responder,y=latency_ms,color=size))+
+         geom_point()+
+         geom_smooth(method=lm,fullrange=TRUE,
+                  aes(color=size))+
+        scale_color_manual(name='Size',
+                     breaks=c('large', 'small'),
+                     values=c('large'='#E69F00', 'small'='#0C7BDC'))+
+   theme(legend.title=element_text(size=14),
+       legend.text=element_text(size=14))+
+         theme_classic()
+
+
+
 
 ```
 
