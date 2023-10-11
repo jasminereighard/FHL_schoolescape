@@ -324,7 +324,7 @@ wilcox.test(latency_ms ~ size, data = wave_dat_fast)
 
 
 ```{r}
-#Correlation and Principal Component Analysis 
+#Correlation and Principal Component Analysis, not using this
 
 
 #new df with specified columns
