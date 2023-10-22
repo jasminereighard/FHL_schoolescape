@@ -1,11 +1,8 @@
 ---
-title: "FHL_code_draft1"
-author: "Jasmine Reighard"
-date: "2023-09-20"
-output:
-  word_document: default
-  html_document: default
-editor_options:
+output: 
+  github_document:
+    toc: true
+editor_options: 
   chunk_output_type: console
 ---
 
@@ -42,6 +39,8 @@ library(corrr)
 library(ggcorrplot)
 library(FactoMineR)
 library(MASS)
+library(knitr)
+library(stargazer)
 
 ```
 
@@ -173,10 +172,12 @@ summary_table <- cym_dat %>%
   summarise(count = n()) %>%
   mutate(percentage = count / sum(count) * 100)
 
+
+
 ggplot(summary_table, aes(x = size, y = percentage, fill = response_type)) +
   geom_bar(stat = "identity", position = "dodge") +
-  labs(title = "Percentage of Fast and Slow Responses by Size Group", y = "Percentage") +
-  scale_fill_fish_d(option = "Trimma_lantana") +
+  labs(title = "Percentage of Fast and Slow Responses by Size Group", y = "Percentage", x = "Size") +
+  scale_fill_fish_d(option = "Trimma_lantana", name = "Response Type") +
   theme_minimal()
 
 #frequency of fast and slow
@@ -213,8 +214,20 @@ ggplot(cym_dat,aes(x=turning_duration,y=turning_angle_absolute_value,color=respo
 # Calculating NND for each responder within the same school and stimulus group
 #NAs come from two having the same nearest neighbor distance
 
+nnd_df$school <- as.factor(nnd_df$school)
+nnd_df$size <- as.factor(nnd_df$size)
+nnd_df$stimulus <- as.factor(nnd_df$stimulus)
+
 nnd_df <- nnd_df %>%
   group_by(school, stimulus) %>%
+  mutate(
+    NND = sqrt((s_head_x - lag(s_head_x))^2 + (s_head_y - lag(s_head_y))^2)
+  ) %>%
+  ungroup()
+
+#nnd from head to head using Euclidean distance formula
+nnd_df <- nnd_df %>%
+  group_by(school, size, stimulus) %>%
   mutate(
     NND = sqrt((s_head_x - lag(s_head_x))^2 + (s_head_y - lag(s_head_y))^2)
   ) %>%
@@ -239,8 +252,8 @@ manwhit_NND <- wilcox.test(NND ~ size, data = cym_dat)
 print(manwhit_NND) 
 #they are significantly different from each other and further apart!  
 
-boxplot(NND ~ size, data = cym_dat, main = "Boxplot of NND by Size",
-        xlab = "Size", ylab = "NND")
+boxplot(NND ~ size, data = cym_dat, main = "Nearest Neighbor Distances by Size Class",
+        xlab = "Size", ylab = "Distance (cm)")
 
 ```
 
@@ -263,34 +276,91 @@ wilcox.test(turning_rate ~ response_type, data = cym_dat)
 ```
 
 ```{r}
+#stuff to come back to in order to filter out longer latencies that should not be considered part of the wave
+
+#quartiles <- wave_dat_fast %>%
+ # group_by(size) %>%
+#  summarize(
+ #   Q1 = quantile(latency_ms, 0.25),
+  #  Median = median(latency_ms),
+  #  Q3 = quantile(latency_ms, 0.75)
+#  )
+
+# View the quartiles for each size class
+#print(quartiles)
+
+#filtered_wave_dat_fast <- wave_dat_fast %>%
+#  group_by(size) %>%
+#  filter(latency_ms <= (quantile(latency_ms, 0.75) + 1.5 * IQR(latency_ms))) %>%
+#  ungroup()
+
+#ggplot(filtered_wave_dat_fast) +
+#  geom_point(aes(x = latency_ms, y = turning_rate, color = size)) +
+#  geom_smooth(aes(x = latency_ms, y = turning_rate, color = size), method = "lm") +
+#  scale_color_fish_d(option = "Trimma_lantana") 
+
+```
+
+
+```{r}
 #Only interested in fast responses, making new dataset excluding slow responses
 
 fast_dat <- cym_dat %>%
   filter(response_type == "fast")
 
 #glm for fast
-mod_fast <- glm(latency_ms ~ s_w_reactor + distance_from_stimulus + size+ angle_between_fish_and_stimulus + distance_from_first_responder +NND, data = fast_dat, family=poisson, na.action = na.exclude)
-summary(mod_fast)
-par(mfrow=c(2,2))
-plot(mod_fast)
+#mod_fast <- glm(latency_ms ~ s_w_reactor + distance_from_stimulus + size+ angle_between_fish_and_stimulus + distance_from_first_responder +NND, data = fast_dat, family=poisson, na.action = na.exclude)
+#summary(mod_fast)
+#par(mfrow=c(2,2))
+#plot(mod_fast)
 
 #subsetting just the wave
 wave_dat_fast <- subset(fast_dat, substr(responder, 1, 1) == "w")
 
+
+#frequency of latency
+histogram <- hist(wave_dat_fast$latency_ms, 
+                  main = "Frequency Histogram of Latency (ms)",
+                  xlab = "Latency (ms)",
+                  ylab = "Frequency",
+                  col = "lightblue",  # Adjust color as needed
+                  border = "black",  # Adjust border color as needed
+                  breaks = 20)  # You can adjust the number of bins by changing 'breaks'
+
+# Plot the histogram
+par(mfrow=c(1,1))
+plot(histogram, col = "lightblue", border = "black")
+
+
+ggplot(wave_dat_fast) +
+  geom_point(aes(x = latency_ms, y = turning_rate, color = size)) +
+  geom_smooth(aes(x = latency_ms, y = turning_rate, color = size), method = "lm") +
+  scale_color_fish_d(option = "Trimma_lantana") 
+
+latency_df <- wave_dat_fast[c("school", "stimulus", "size", "responder", "latency_ms", "turning_rate")]
+
+
+
+
 #glm for wave
-glm_wave_fast <- glm(latency_ms ~ size+ angle_between_fish_and_stimulus+distance_from_first_responder +NND, data = wave_dat_fast, family=Gamma(link = "log"), na.action = na.exclude)
+glm_wave_fast <- glm(latency_ms ~ size+ angle_between_fish_and_stimulus + distance_from_first_responder + NND,data = wave_dat_fast, family=Gamma(link = "log"), na.action = na.exclude)
 summary(glm_wave_fast)
 par(mfrow=c(2,2))
 plot(glm_wave_fast)
 
+
+
+
 with(summary(glm_wave_fast), 1 - deviance/null.deviance)
 
 #taking out all insignificant variables
-glm_size_distfr <- glm(latency_ms ~ size + distance_from_first_responder , data = wave_dat_fast, family=Gamma(link = "log"))
+glm_size_distfr <- glm(latency_ms ~ size + distance_from_first_responder +NND, data = wave_dat_fast, family=Gamma(link = "log"))
 summary(glm_size_distfr)
 par(mfrow=c(2,2))
 plot(glm_size_distfr)
 #size is more significant
+html_table1 <- stargazer(glm_size_distfr, type = "html")
+cat(html_table1)
 
 #calculate McFadden's R-squared for model for size and distance from first responder glm
 with(summary(glm_size_distfr), 1 - deviance/null.deviance)
@@ -316,6 +386,45 @@ shapiro.test(lm_wavedat_fast$residuals)
 bartlett.test(latency_ms ~ size, data=wave_dat_fast)
 
 wilcox.test(latency_ms ~ size, data = wave_dat_fast)
+
+
+
+
+#for later when we have all the schools done, this is a multi-comparison to see 
+#if the schools were sig different
+aov_school <- aov(latency_ms ~school * size, data=wave_dat_fast)
+summary(aov_school)
+
+
+TukeyHSD(aov_school, which='school:size')
+
+sch_size_multicomp <- HSD.test(aov_school, trt = c("school", "size"), console = TRUE)
+bar.group(sch_size_multicomp$groups, ylim=c(0,650))
+
+sch_size_multicomp <- HSD.test(aov_school, trt = c("school", "size"), console = TRUE)
+bar.group(sch_size_multicomp$groups, ylim=c(0,650))
+
+#just small
+
+small_data <- wave_dat_fast %>% filter(size == "small")
+
+aov_small <- aov(latency_ms ~school, data=small_data)
+summary(aov_small)
+
+small_size_multicomp <- HSD.test(aov_small, trt = c("school"), console = TRUE)
+bar.group(small_size_multicomp$groups, ylim=c(0,650))
+
+#just large
+
+large_data <- wave_dat_fast %>% filter(size == "large")
+
+aov_large <- aov(latency_ms ~school, data=large_data)
+summary(aov_large)
+
+large_size_multicomp <- HSD.test(aov_large, trt = c("school"), console = TRUE)
+bar.group(large_size_multicomp$groups, ylim=c(0,650))
+
+
 
 
 

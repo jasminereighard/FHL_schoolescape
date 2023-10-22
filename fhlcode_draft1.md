@@ -197,8 +197,8 @@ summary_table <- cym_dat %>%
 ``` r
 ggplot(summary_table, aes(x = size, y = percentage, fill = response_type)) +
   geom_bar(stat = "identity", position = "dodge") +
-  labs(title = "Percentage of Fast and Slow Responses by Size Group", y = "Percentage") +
-  scale_fill_fish_d(option = "Trimma_lantana") +
+  labs(title = "Percentage of Fast and Slow Responses by Size Group", y = "Percentage", x = "Size") +
+  scale_fill_fish_d(option = "Trimma_lantana", name = "Response Type") +
   theme_minimal()
 ```
 
@@ -247,8 +247,20 @@ ggplot(cym_dat,aes(x=turning_duration,y=turning_angle_absolute_value,color=respo
 # Calculating NND for each responder within the same school and stimulus group
 #NAs come from two having the same nearest neighbor distance
 
+nnd_df$school <- as.factor(nnd_df$school)
+nnd_df$size <- as.factor(nnd_df$size)
+nnd_df$stimulus <- as.factor(nnd_df$stimulus)
+
 nnd_df <- nnd_df %>%
   group_by(school, stimulus) %>%
+  mutate(
+    NND = sqrt((s_head_x - lag(s_head_x))^2 + (s_head_y - lag(s_head_y))^2)
+  ) %>%
+  ungroup()
+
+#nnd from head to head using Euclidean distance formula
+nnd_df <- nnd_df %>%
+  group_by(school, size, stimulus) %>%
   mutate(
     NND = sqrt((s_head_x - lag(s_head_x))^2 + (s_head_y - lag(s_head_y))^2)
   ) %>%
@@ -271,8 +283,8 @@ print(avgNND_result)
 ```
 
     ##    size      NND
-    ## 1 large 19.66457
-    ## 2 small 13.98682
+    ## 1 large 19.64807
+    ## 2 small 13.02017
 
 ``` r
 manwhit_NND <- wilcox.test(NND ~ size, data = cym_dat)
@@ -283,14 +295,14 @@ print(manwhit_NND)
     ##  Wilcoxon rank sum test with continuity correction
     ## 
     ## data:  NND by size
-    ## W = 31680, p-value = 1.444e-09
+    ## W = 30968, p-value = 2.275e-10
     ## alternative hypothesis: true location shift is not equal to 0
 
 ``` r
 #they are significantly different from each other and further apart!  
 
-boxplot(NND ~ size, data = cym_dat, main = "Boxplot of NND by Size",
-        xlab = "Size", ylab = "NND")
+boxplot(NND ~ size, data = cym_dat, main = "Nearest Neighbor Distances by Size Class",
+        xlab = "Size", ylab = "Distance (cm)")
 ```
 
 ![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
@@ -331,649 +343,85 @@ wilcox.test(turning_rate ~ response_type, data = cym_dat)
 ```
 
 ``` r
+#stuff to come back to in order to filter out longer latencies that should not be considered part of the wave
+
+#quartiles <- wave_dat_fast %>%
+ # group_by(size) %>%
+#  summarize(
+ #   Q1 = quantile(latency_ms, 0.25),
+  #  Median = median(latency_ms),
+  #  Q3 = quantile(latency_ms, 0.75)
+#  )
+
+# View the quartiles for each size class
+#print(quartiles)
+
+#filtered_wave_dat_fast <- wave_dat_fast %>%
+#  group_by(size) %>%
+#  filter(latency_ms <= (quantile(latency_ms, 0.75) + 1.5 * IQR(latency_ms))) %>%
+#  ungroup()
+
+#ggplot(filtered_wave_dat_fast) +
+#  geom_point(aes(x = latency_ms, y = turning_rate, color = size)) +
+#  geom_smooth(aes(x = latency_ms, y = turning_rate, color = size), method = "lm") +
+#  scale_color_fish_d(option = "Trimma_lantana") 
+```
+
+``` r
 #Only interested in fast responses, making new dataset excluding slow responses
 
 fast_dat <- cym_dat %>%
   filter(response_type == "fast")
 
 #glm for fast
-mod_fast <- glm(latency_ms ~ s_w_reactor + distance_from_stimulus + size+ angle_between_fish_and_stimulus + distance_from_first_responder +NND, data = fast_dat, family=poisson, na.action = na.exclude)
-```
+#mod_fast <- glm(latency_ms ~ s_w_reactor + distance_from_stimulus + size+ angle_between_fish_and_stimulus + distance_from_first_responder +NND, data = fast_dat, family=poisson, na.action = na.exclude)
+#summary(mod_fast)
+#par(mfrow=c(2,2))
+#plot(mod_fast)
 
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 4.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 12.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 20.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 20.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 41.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 16.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 54.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 41.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 112.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 104.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 108.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 141.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 187.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 179.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 216.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 195.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 220.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 8.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 20.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 33.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 29.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 41.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 83.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 70.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 104.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 112.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 91.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 195.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 191.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 241.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 308.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 237.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 483.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 987.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 379.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 233.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 233.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 291.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 308.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 433.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 504.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 295.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 133.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 287.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 420.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 458.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 470.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 508.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 658.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 495.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 8.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 37.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 41.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 37.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 45.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 66.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 154.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 62.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 112.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 154.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 183.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 195.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 266.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 33.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 58.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 133.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 154.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 154.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 170.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 241.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 170.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 233.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 170.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 212.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 229.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 233.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 383.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 12.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 16.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 45.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 66.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 87.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 95.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 133.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 141.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 137.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 141.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 158.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 204.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 320.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 95.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 270.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 233.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 241.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 420.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 416.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 516.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 29.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 33.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 91.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 341.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 395.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 166.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 212.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 245.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 262.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 283.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 41.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 45.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 116.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 145.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 233.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 583.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 170.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 204.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 233.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 237.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 241.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 337.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 58.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 87.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 116.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 458.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 112.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 187.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 187.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 258.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 262.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 12.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 12.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 45.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 62.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 91.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 162.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 120.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 133.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 154.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 162.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 233.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 287.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 366.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 370.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 379.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 391.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 404.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 29.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 37.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 66.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 91.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 91.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 166.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 179.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 216.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 229.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 258.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 329.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 441.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 483.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 8.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 20.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 170.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 179.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 216.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 304.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 312.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 341.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 512.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 591.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 1087.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 91.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 104.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 104.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 162.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 516.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 283.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 362.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 383.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 445.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 454.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 458.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 41.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 79.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 141.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 1391.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 91.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 216.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 233.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 308.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 612.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 429.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 262.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 8.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 20.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 137.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 145.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 204.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 220.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 329.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 404.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 1366.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 283.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 316.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 316.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 345.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 570.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 695.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 720.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 29.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 29.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 308.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 220.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 391.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 512.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 566.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 1070.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 12.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 104.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 329.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 1679.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 12.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 33.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 37.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 41.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 137.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 162.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 187.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 220.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 395.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 441.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 504.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 537.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 558.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 1295.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 62.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 91.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 116.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 195.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 329.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 158.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 212.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 262.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 304.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 479.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 33.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 41.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 54.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 116.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 637.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 383.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 487.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 1241.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 1383.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 37.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 45.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 45.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 62.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 70.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 87.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 120.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 129.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 141.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 162.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 204.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 212.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 283.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 391.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 395.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 404.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 566.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 29.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 83.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 245.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 383.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 395.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 262.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 287.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 308.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 358.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 366.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 429.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 54.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 70.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 95.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 116.700000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 179.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 212.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 179.200000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 183.300000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 287.500000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 345.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 345.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 370.800000
-
-    ## Warning in dpois(y, mu, log = TRUE): non-integer x = 645.800000
-
-``` r
-summary(mod_fast)
-```
-
-    ## 
-    ## Call:
-    ## glm(formula = latency_ms ~ s_w_reactor + distance_from_stimulus + 
-    ##     size + angle_between_fish_and_stimulus + distance_from_first_responder + 
-    ##     NND, family = poisson, data = fast_dat, na.action = na.exclude)
-    ## 
-    ## Deviance Residuals: 
-    ##     Min       1Q   Median       3Q      Max  
-    ## -19.775   -9.307   -3.078    3.434   58.017  
-    ## 
-    ## Coefficients:
-    ##                                   Estimate Std. Error z value Pr(>|z|)    
-    ## (Intercept)                      4.159e+00  1.507e-02 275.930  < 2e-16 ***
-    ## s_w_reactorw                     5.642e-01  8.873e-03  63.583  < 2e-16 ***
-    ## distance_from_stimulus           1.732e-02  3.357e-04  51.610  < 2e-16 ***
-    ## sizesmall                        5.673e-01  7.711e-03  73.568  < 2e-16 ***
-    ## angle_between_fish_and_stimulus -3.794e-04  4.777e-05  -7.942 1.98e-15 ***
-    ## distance_from_first_responder    3.501e-03  2.616e-04  13.380  < 2e-16 ***
-    ## NND                             -5.084e-04  3.109e-04  -1.635    0.102    
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## (Dispersion parameter for poisson family taken to be 1)
-    ## 
-    ##     Null deviance: 68771  on 361  degrees of freedom
-    ## Residual deviance: 48263  on 355  degrees of freedom
-    ##   (16 observations deleted due to missingness)
-    ## AIC: Inf
-    ## 
-    ## Number of Fisher Scoring iterations: 5
-
-``` r
-par(mfrow=c(2,2))
-plot(mod_fast)
-```
-
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
-
-``` r
 #subsetting just the wave
 wave_dat_fast <- subset(fast_dat, substr(responder, 1, 1) == "w")
 
+
+#frequency of latency
+histogram <- hist(wave_dat_fast$latency_ms, 
+                  main = "Frequency Histogram of Latency (ms)",
+                  xlab = "Latency (ms)",
+                  ylab = "Frequency",
+                  col = "lightblue",  # Adjust color as needed
+                  border = "black",  # Adjust border color as needed
+                  breaks = 20)  # You can adjust the number of bins by changing 'breaks'
+```
+
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+
+``` r
+# Plot the histogram
+par(mfrow=c(1,1))
+plot(histogram, col = "lightblue", border = "black")
+```
+
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-8-2.png)<!-- -->
+
+``` r
+ggplot(wave_dat_fast) +
+  geom_point(aes(x = latency_ms, y = turning_rate, color = size)) +
+  geom_smooth(aes(x = latency_ms, y = turning_rate, color = size), method = "lm") +
+  scale_color_fish_d(option = "Trimma_lantana") 
+```
+
+    ## `geom_smooth()` using formula = 'y ~ x'
+
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-8-3.png)<!-- -->
+
+``` r
+latency_df <- wave_dat_fast[c("school", "stimulus", "size", "responder", "latency_ms", "turning_rate")]
+
+
+
+
 #glm for wave
-glm_wave_fast <- glm(latency_ms ~ size+ angle_between_fish_and_stimulus+distance_from_first_responder +NND, data = wave_dat_fast, family=Gamma(link = "log"), na.action = na.exclude)
+glm_wave_fast <- glm(latency_ms ~ size+ angle_between_fish_and_stimulus + distance_from_first_responder + NND,data = wave_dat_fast, family=Gamma(link = "log"), na.action = na.exclude)
 summary(glm_wave_fast)
 ```
 
@@ -1010,7 +458,7 @@ par(mfrow=c(2,2))
 plot(glm_wave_fast)
 ```
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-7-2.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-8-4.png)<!-- -->
 
 ``` r
 with(summary(glm_wave_fast), 1 - deviance/null.deviance)
@@ -1020,32 +468,33 @@ with(summary(glm_wave_fast), 1 - deviance/null.deviance)
 
 ``` r
 #taking out all insignificant variables
-glm_size_distfr <- glm(latency_ms ~ size + distance_from_first_responder , data = wave_dat_fast, family=Gamma(link = "log"))
+glm_size_distfr <- glm(latency_ms ~ size + distance_from_first_responder +NND, data = wave_dat_fast, family=Gamma(link = "log"))
 summary(glm_size_distfr)
 ```
 
     ## 
     ## Call:
-    ## glm(formula = latency_ms ~ size + distance_from_first_responder, 
-    ##     family = Gamma(link = "log"), data = wave_dat_fast)
+    ## glm(formula = latency_ms ~ size + distance_from_first_responder + 
+    ##     NND, family = Gamma(link = "log"), data = wave_dat_fast)
     ## 
     ## Deviance Residuals: 
     ##     Min       1Q   Median       3Q      Max  
-    ## -1.3469  -0.5065  -0.1143   0.2011   1.5153  
+    ## -1.3535  -0.4999  -0.1056   0.2059   1.5251  
     ## 
     ## Coefficients:
-    ##                               Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)                   5.371731   0.101721  52.809  < 2e-16 ***
-    ## sizesmall                     0.482675   0.084874   5.687 4.39e-08 ***
-    ## distance_from_first_responder 0.007346   0.003004   2.446   0.0153 *  
+    ##                                Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)                    5.406899   0.127851  42.291  < 2e-16 ***
+    ## sizesmall                      0.470122   0.090039   5.221 4.35e-07 ***
+    ## distance_from_first_responder  0.007475   0.003035   2.463   0.0146 *  
+    ## NND                           -0.001823   0.004109  -0.444   0.6579    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## (Dispersion parameter for Gamma family taken to be 0.3458747)
+    ## (Dispersion parameter for Gamma family taken to be 0.3461796)
     ## 
     ##     Null deviance: 75.546  on 208  degrees of freedom
-    ## Residual deviance: 63.585  on 206  degrees of freedom
-    ## AIC: 2725
+    ## Residual deviance: 63.523  on 205  degrees of freedom
+    ## AIC: 2726.8
     ## 
     ## Number of Fisher Scoring iterations: 6
 
@@ -1054,16 +503,47 @@ par(mfrow=c(2,2))
 plot(glm_size_distfr)
 ```
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-7-3.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-8-5.png)<!-- -->
 
 ``` r
 #size is more significant
+html_table1 <- stargazer(glm_size_distfr, type = "html")
+```
 
+    ## 
+    ## <table style="text-align:center"><tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left"></td><td><em>Dependent variable:</em></td></tr>
+    ## <tr><td></td><td colspan="1" style="border-bottom: 1px solid black"></td></tr>
+    ## <tr><td style="text-align:left"></td><td>latency_ms</td></tr>
+    ## <tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left">sizesmall</td><td>0.470<sup>***</sup></td></tr>
+    ## <tr><td style="text-align:left"></td><td>(0.090)</td></tr>
+    ## <tr><td style="text-align:left"></td><td></td></tr>
+    ## <tr><td style="text-align:left">distance_from_first_responder</td><td>0.007<sup>**</sup></td></tr>
+    ## <tr><td style="text-align:left"></td><td>(0.003)</td></tr>
+    ## <tr><td style="text-align:left"></td><td></td></tr>
+    ## <tr><td style="text-align:left">NND</td><td>-0.002</td></tr>
+    ## <tr><td style="text-align:left"></td><td>(0.004)</td></tr>
+    ## <tr><td style="text-align:left"></td><td></td></tr>
+    ## <tr><td style="text-align:left">Constant</td><td>5.407<sup>***</sup></td></tr>
+    ## <tr><td style="text-align:left"></td><td>(0.128)</td></tr>
+    ## <tr><td style="text-align:left"></td><td></td></tr>
+    ## <tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left">Observations</td><td>209</td></tr>
+    ## <tr><td style="text-align:left">Log Likelihood</td><td>-1,359.382</td></tr>
+    ## <tr><td style="text-align:left">Akaike Inf. Crit.</td><td>2,726.764</td></tr>
+    ## <tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left"><em>Note:</em></td><td style="text-align:right"><sup>*</sup>p<0.1; <sup>**</sup>p<0.05; <sup>***</sup>p<0.01</td></tr>
+    ## </table>
+
+``` r
+cat(html_table1)
+```
+
+    ##  <table style="text-align:center"><tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left"></td><td><em>Dependent variable:</em></td></tr> <tr><td></td><td colspan="1" style="border-bottom: 1px solid black"></td></tr> <tr><td style="text-align:left"></td><td>latency_ms</td></tr> <tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left">sizesmall</td><td>0.470<sup>***</sup></td></tr> <tr><td style="text-align:left"></td><td>(0.090)</td></tr> <tr><td style="text-align:left"></td><td></td></tr> <tr><td style="text-align:left">distance_from_first_responder</td><td>0.007<sup>**</sup></td></tr> <tr><td style="text-align:left"></td><td>(0.003)</td></tr> <tr><td style="text-align:left"></td><td></td></tr> <tr><td style="text-align:left">NND</td><td>-0.002</td></tr> <tr><td style="text-align:left"></td><td>(0.004)</td></tr> <tr><td style="text-align:left"></td><td></td></tr> <tr><td style="text-align:left">Constant</td><td>5.407<sup>***</sup></td></tr> <tr><td style="text-align:left"></td><td>(0.128)</td></tr> <tr><td style="text-align:left"></td><td></td></tr> <tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left">Observations</td><td>209</td></tr> <tr><td style="text-align:left">Log Likelihood</td><td>-1,359.382</td></tr> <tr><td style="text-align:left">Akaike Inf. Crit.</td><td>2,726.764</td></tr> <tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left"><em>Note:</em></td><td style="text-align:right"><sup>*</sup>p<0.1; <sup>**</sup>p<0.05; <sup>***</sup>p<0.01</td></tr> </table>
+
+``` r
 #calculate McFadden's R-squared for model for size and distance from first responder glm
 with(summary(glm_size_distfr), 1 - deviance/null.deviance)
 ```
 
-    ## [1] 0.1583209
+    ## [1] 0.1591377
 
 ``` r
 glm_size <- glm(latency_ms ~ size, data = wave_dat_fast, family=Gamma(link = "log"))
@@ -1099,7 +579,7 @@ par(mfrow=c(2,2))
 plot(glm_size)
 ```
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-7-4.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-8-6.png)<!-- -->
 
 ``` r
 with(summary(glm_size), 1 - deviance/null.deviance)
@@ -1166,6 +646,222 @@ wilcox.test(latency_ms ~ size, data = wave_dat_fast)
     ## alternative hypothesis: true location shift is not equal to 0
 
 ``` r
+#for later when we have all the schools done, this is a multi-comparison to see 
+#if the schools were sig different
+aov_school <- aov(latency_ms ~school * size, data=wave_dat_fast)
+summary(aov_school)
+```
+
+    ##              Df  Sum Sq Mean Sq F value   Pr(>F)    
+    ## school        2 1281023  640512  13.407 3.40e-06 ***
+    ## size          1  953245  953245  19.952 1.32e-05 ***
+    ## school:size   2   73446   36723   0.769    0.465    
+    ## Residuals   203 9698543   47776                     
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+``` r
+TukeyHSD(aov_school, which='school:size')
+```
+
+    ##   Tukey multiple comparisons of means
+    ##     95% family-wise confidence level
+    ## 
+    ## Fit: aov(formula = latency_ms ~ school * size, data = wave_dat_fast)
+    ## 
+    ## $`school:size`
+    ##                      diff         lwr      upr     p adj
+    ## 2:large-1:large  70.61611  -79.382822 220.6150 0.7539830
+    ## 3:large-1:large 141.51088  -26.353566 309.3753 0.1524229
+    ## 1:small-1:large  97.92263  -58.101219 253.9465 0.4643748
+    ## 2:small-1:large 196.00992   51.246220 340.7736 0.0018280
+    ## 3:small-1:large 334.94393  180.053786 489.8341 0.0000000
+    ## 3:large-2:large  70.89477  -90.226900 232.0164 0.8031414
+    ## 1:small-2:large  27.30653 -121.438772 176.0518 0.9949897
+    ## 2:small-2:large 125.39381  -11.493916 262.2815 0.0935020
+    ## 3:small-2:large 264.32783  116.772144 411.8835 0.0000089
+    ## 1:small-3:large -43.58824 -210.333425 123.1569 0.9749531
+    ## 2:small-3:large  54.49904 -101.760492 210.7586 0.9163762
+    ## 3:small-3:large 193.43306   27.748202 359.1179 0.0118674
+    ## 2:small-1:small  98.08729  -45.377044 241.5516 0.3649276
+    ## 3:small-1:small 237.02130   83.344877 390.6977 0.0002142
+    ## 3:small-2:small 138.93402   -3.296536 281.1646 0.0598263
+
+``` r
+sch_size_multicomp <- HSD.test(aov_school, trt = c("school", "size"), console = TRUE)
+```
+
+    ## 
+    ## Study: aov_school ~ c("school", "size")
+    ## 
+    ## HSD Test for latency_ms 
+    ## 
+    ## Mean Square Error:  47776.07 
+    ## 
+    ## school:size,  means
+    ## 
+    ##         latency_ms       std  r   Min    Max
+    ## 1:large   197.6531  89.99878 32  66.7  475.0
+    ## 1:small   295.5758 201.63413 33  70.8  987.5
+    ## 2:large   268.2692 111.71392 39 112.5  625.0
+    ## 2:small   393.6630 233.11708 46  91.7 1200.0
+    ## 3:large   339.1640 115.99488 25 150.0  645.8
+    ## 3:small   532.5971 385.48794 34 158.3 1679.2
+    ## 
+    ## Alpha: 0.05 ; DF Error: 203 
+    ## Critical Value of Studentized Range: 4.068891 
+    ## 
+    ## Groups according to probability of means differences and alpha level( 0.05 )
+    ## 
+    ## Treatments with the same letter are not significantly different.
+    ## 
+    ##         latency_ms groups
+    ## 3:small   532.5971      a
+    ## 2:small   393.6630     ab
+    ## 3:large   339.1640     bc
+    ## 1:small   295.5758     bc
+    ## 2:large   268.2692     bc
+    ## 1:large   197.6531      c
+
+``` r
+bar.group(sch_size_multicomp$groups, ylim=c(0,650))
+
+sch_size_multicomp <- HSD.test(aov_school, trt = c("school", "size"), console = TRUE)
+```
+
+    ## 
+    ## Study: aov_school ~ c("school", "size")
+    ## 
+    ## HSD Test for latency_ms 
+    ## 
+    ## Mean Square Error:  47776.07 
+    ## 
+    ## school:size,  means
+    ## 
+    ##         latency_ms       std  r   Min    Max
+    ## 1:large   197.6531  89.99878 32  66.7  475.0
+    ## 1:small   295.5758 201.63413 33  70.8  987.5
+    ## 2:large   268.2692 111.71392 39 112.5  625.0
+    ## 2:small   393.6630 233.11708 46  91.7 1200.0
+    ## 3:large   339.1640 115.99488 25 150.0  645.8
+    ## 3:small   532.5971 385.48794 34 158.3 1679.2
+    ## 
+    ## Alpha: 0.05 ; DF Error: 203 
+    ## Critical Value of Studentized Range: 4.068891 
+    ## 
+    ## Groups according to probability of means differences and alpha level( 0.05 )
+    ## 
+    ## Treatments with the same letter are not significantly different.
+    ## 
+    ##         latency_ms groups
+    ## 3:small   532.5971      a
+    ## 2:small   393.6630     ab
+    ## 3:large   339.1640     bc
+    ## 1:small   295.5758     bc
+    ## 2:large   268.2692     bc
+    ## 1:large   197.6531      c
+
+``` r
+bar.group(sch_size_multicomp$groups, ylim=c(0,650))
+
+#just small
+
+small_data <- wave_dat_fast %>% filter(size == "small")
+
+aov_small <- aov(latency_ms ~school, data=small_data)
+summary(aov_small)
+```
+
+    ##              Df  Sum Sq Mean Sq F value  Pr(>F)   
+    ## school        2  954223  477111   6.067 0.00317 **
+    ## Residuals   110 8650294   78639                   
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+``` r
+small_size_multicomp <- HSD.test(aov_small, trt = c("school"), console = TRUE)
+```
+
+    ## 
+    ## Study: aov_small ~ c("school")
+    ## 
+    ## HSD Test for latency_ms 
+    ## 
+    ## Mean Square Error:  78639.04 
+    ## 
+    ## school,  means
+    ## 
+    ##   latency_ms      std  r   Min    Max
+    ## 1   295.5758 201.6341 33  70.8  987.5
+    ## 2   393.6630 233.1171 46  91.7 1200.0
+    ## 3   532.5971 385.4879 34 158.3 1679.2
+    ## 
+    ## Alpha: 0.05 ; DF Error: 110 
+    ## Critical Value of Studentized Range: 3.359968 
+    ## 
+    ## Groups according to probability of means differences and alpha level( 0.05 )
+    ## 
+    ## Treatments with the same letter are not significantly different.
+    ## 
+    ##   latency_ms groups
+    ## 3   532.5971      a
+    ## 2   393.6630     ab
+    ## 1   295.5758      b
+
+``` r
+bar.group(small_size_multicomp$groups, ylim=c(0,650))
+
+#just large
+
+large_data <- wave_dat_fast %>% filter(size == "large")
+
+aov_large <- aov(latency_ms ~school, data=large_data)
+summary(aov_large)
+```
+
+    ##             Df  Sum Sq Mean Sq F value  Pr(>F)    
+    ## school       2  282750  141375   12.54 1.5e-05 ***
+    ## Residuals   93 1048249   11271                    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+``` r
+large_size_multicomp <- HSD.test(aov_large, trt = c("school"), console = TRUE)
+```
+
+    ## 
+    ## Study: aov_large ~ c("school")
+    ## 
+    ## HSD Test for latency_ms 
+    ## 
+    ## Mean Square Error:  11271.49 
+    ## 
+    ## school,  means
+    ## 
+    ##   latency_ms       std  r   Min   Max
+    ## 1   197.6531  89.99878 32  66.7 475.0
+    ## 2   268.2692 111.71392 39 112.5 625.0
+    ## 3   339.1640 115.99488 25 150.0 645.8
+    ## 
+    ## Alpha: 0.05 ; DF Error: 93 
+    ## Critical Value of Studentized Range: 3.368392 
+    ## 
+    ## Groups according to probability of means differences and alpha level( 0.05 )
+    ## 
+    ## Treatments with the same letter are not significantly different.
+    ## 
+    ##   latency_ms groups
+    ## 3   339.1640      a
+    ## 2   268.2692      b
+    ## 1   197.6531      c
+
+``` r
+bar.group(large_size_multicomp$groups, ylim=c(0,650))
+```
+
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-8-7.png)<!-- -->
+
+``` r
 #Correlation and Principal Component Analysis, not using this
 
 
@@ -1207,7 +903,7 @@ ggplot(wave_dat_fast) +
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 ``` r
 ggplot(cym_dat,aes(x=turning_duration,y=turning_angle_absolute_value,color=response_type))+
@@ -1224,7 +920,7 @@ ggplot(cym_dat,aes(x=turning_duration,y=turning_angle_absolute_value,color=respo
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-10-2.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-11-2.png)<!-- -->
 
 ``` r
 # Predict the values using the fitted model
@@ -1241,7 +937,7 @@ ggplot(plot_data, aes(x = Observed, y = Predicted)) +
   theme_minimal()
 ```
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 ``` r
 ggplt <- ggplot(wave_dat,aes(x=distance_from_first_responder,y=latency_ms,color=size))+
@@ -1254,13 +950,13 @@ ggplt+geom_smooth(method=lm,fullrange=TRUE,
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-11-2.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-12-2.png)<!-- -->
 
 ``` r
 ggplt+scale_color_manual(values=c("#E69F00","#0C7BDC"))
 ```
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-11-3.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-12-3.png)<!-- -->
 
 ``` r
 ggplt+scale_color_manual(name='Size',
@@ -1270,7 +966,7 @@ ggplt+scale_color_manual(name='Size',
        legend.text=element_text(size=14))
 ```
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-11-4.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-12-4.png)<!-- -->
 
 ``` r
 #plots 
@@ -1289,4 +985,4 @@ ggplot(wave_dat_fast,aes(x=distance_from_first_responder,y=latency_ms,color=size
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
