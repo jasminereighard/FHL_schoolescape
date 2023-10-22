@@ -218,7 +218,7 @@ summary_table <- cym_dat %>%
 ggplot(summary_table, aes(x = size, y = count, fill = response_type)) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(title = "Frequency of Fast and Slow Responses by Size Group", y = "Frequency") +
-  scale_fill_fish_d(option = "Trimma_lantana") +
+  scale_fill_manual(values = c("gray40", "gray80")) +
   theme_minimal()
 ```
 
@@ -506,40 +506,7 @@ plot(glm_size_distfr)
 ![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-8-5.png)<!-- -->
 
 ``` r
-#size is more significant
-html_table1 <- stargazer(glm_size_distfr, type = "html")
-```
-
-    ## 
-    ## <table style="text-align:center"><tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left"></td><td><em>Dependent variable:</em></td></tr>
-    ## <tr><td></td><td colspan="1" style="border-bottom: 1px solid black"></td></tr>
-    ## <tr><td style="text-align:left"></td><td>latency_ms</td></tr>
-    ## <tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left">sizesmall</td><td>0.470<sup>***</sup></td></tr>
-    ## <tr><td style="text-align:left"></td><td>(0.090)</td></tr>
-    ## <tr><td style="text-align:left"></td><td></td></tr>
-    ## <tr><td style="text-align:left">distance_from_first_responder</td><td>0.007<sup>**</sup></td></tr>
-    ## <tr><td style="text-align:left"></td><td>(0.003)</td></tr>
-    ## <tr><td style="text-align:left"></td><td></td></tr>
-    ## <tr><td style="text-align:left">NND</td><td>-0.002</td></tr>
-    ## <tr><td style="text-align:left"></td><td>(0.004)</td></tr>
-    ## <tr><td style="text-align:left"></td><td></td></tr>
-    ## <tr><td style="text-align:left">Constant</td><td>5.407<sup>***</sup></td></tr>
-    ## <tr><td style="text-align:left"></td><td>(0.128)</td></tr>
-    ## <tr><td style="text-align:left"></td><td></td></tr>
-    ## <tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left">Observations</td><td>209</td></tr>
-    ## <tr><td style="text-align:left">Log Likelihood</td><td>-1,359.382</td></tr>
-    ## <tr><td style="text-align:left">Akaike Inf. Crit.</td><td>2,726.764</td></tr>
-    ## <tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left"><em>Note:</em></td><td style="text-align:right"><sup>*</sup>p<0.1; <sup>**</sup>p<0.05; <sup>***</sup>p<0.01</td></tr>
-    ## </table>
-
-``` r
-cat(html_table1)
-```
-
-    ##  <table style="text-align:center"><tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left"></td><td><em>Dependent variable:</em></td></tr> <tr><td></td><td colspan="1" style="border-bottom: 1px solid black"></td></tr> <tr><td style="text-align:left"></td><td>latency_ms</td></tr> <tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left">sizesmall</td><td>0.470<sup>***</sup></td></tr> <tr><td style="text-align:left"></td><td>(0.090)</td></tr> <tr><td style="text-align:left"></td><td></td></tr> <tr><td style="text-align:left">distance_from_first_responder</td><td>0.007<sup>**</sup></td></tr> <tr><td style="text-align:left"></td><td>(0.003)</td></tr> <tr><td style="text-align:left"></td><td></td></tr> <tr><td style="text-align:left">NND</td><td>-0.002</td></tr> <tr><td style="text-align:left"></td><td>(0.004)</td></tr> <tr><td style="text-align:left"></td><td></td></tr> <tr><td style="text-align:left">Constant</td><td>5.407<sup>***</sup></td></tr> <tr><td style="text-align:left"></td><td>(0.128)</td></tr> <tr><td style="text-align:left"></td><td></td></tr> <tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left">Observations</td><td>209</td></tr> <tr><td style="text-align:left">Log Likelihood</td><td>-1,359.382</td></tr> <tr><td style="text-align:left">Akaike Inf. Crit.</td><td>2,726.764</td></tr> <tr><td colspan="2" style="border-bottom: 1px solid black"></td></tr><tr><td style="text-align:left"><em>Note:</em></td><td style="text-align:right"><sup>*</sup>p<0.1; <sup>**</sup>p<0.05; <sup>***</sup>p<0.01</td></tr> </table>
-
-``` r
-#calculate McFadden's R-squared for model for size and distance from first responder glm
+#calculate McFadden's R-squared for model for size, distance, NND from first responder glm
 with(summary(glm_size_distfr), 1 - deviance/null.deviance)
 ```
 
@@ -862,6 +829,85 @@ bar.group(large_size_multicomp$groups, ylim=c(0,650))
 ![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-8-7.png)<!-- -->
 
 ``` r
+#Plots
+
+
+#Latency vs distance from first responder
+ggplot(wave_dat_fast,aes(x=distance_from_first_responder,y=latency_ms,color=size))+
+         geom_point()+
+         geom_smooth(method=lm,fullrange=TRUE,
+                  aes(color=size))+
+        scale_color_fish_d(option = "Trimma_lantana", name="Size") +
+   theme(legend.title=element_text(size=14),
+       legend.text=element_text(size=14))+
+  labs(x = "Distance from First Responder",
+       y = "Latency (ms)")+
+         theme_classic()
+```
+
+    ## `geom_smooth()` using formula = 'y ~ x'
+
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+
+``` r
+#Latency vs NND
+ggplot(wave_dat_fast,aes(x=NND,y=latency_ms,color=size))+
+         geom_point()+
+         geom_smooth(method=lm,fullrange=TRUE,
+                  aes(color=size))+
+        scale_color_fish_d(option = "Trimma_lantana", name="Size") +
+   theme(legend.title=element_text(size=14),
+       legend.text=element_text(size=14))+
+  labs(x = "NND",
+       y = "Latency (ms)")+
+         theme_classic()
+```
+
+    ## `geom_smooth()` using formula = 'y ~ x'
+
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-9-2.png)<!-- -->
+
+``` r
+#turning rate for all by responder type
+ggplot(fast_dat,aes(x=NND,y=turning_rate,color=s_w_reactor))+
+         geom_point()+
+         geom_smooth(method=lm,fullrange=TRUE,
+                  aes(color=s_w_reactor))+
+        scale_color_fish_d(option = "Trimma_lantana", name="Reactor") +
+   theme(legend.title=element_text(size=14),
+       legend.text=element_text(size=14))+
+  labs(x = "NND",
+       y = "Turning rate (degree/sec)")
+```
+
+    ## `geom_smooth()` using formula = 'y ~ x'
+
+    ## Warning: Removed 24 rows containing non-finite values (`stat_smooth()`).
+
+    ## Warning: Removed 24 rows containing missing values (`geom_point()`).
+
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-9-3.png)<!-- -->
+
+``` r
+ggplot(fast_dat,aes(x=NND,y=turning_rate,color=size))+
+         geom_point()+
+         geom_smooth(method=lm,fullrange=TRUE,
+                  aes(color=size))+
+        scale_color_fish_d(option = "Trimma_lantana", name="Size") +
+   theme(legend.title=element_text(size=14),
+       legend.text=element_text(size=14))+
+  labs(x = "NND",
+       y = "Turning rate (degree/sec)")
+```
+
+    ## `geom_smooth()` using formula = 'y ~ x'
+
+    ## Warning: Removed 24 rows containing non-finite values (`stat_smooth()`).
+    ## Removed 24 rows containing missing values (`geom_point()`).
+
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-9-4.png)<!-- -->
+
+``` r
 #Correlation and Principal Component Analysis, not using this
 
 
@@ -903,7 +949,7 @@ ggplot(wave_dat_fast) +
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 ``` r
 ggplot(cym_dat,aes(x=turning_duration,y=turning_angle_absolute_value,color=response_type))+
@@ -920,7 +966,7 @@ ggplot(cym_dat,aes(x=turning_duration,y=turning_angle_absolute_value,color=respo
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-11-2.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-12-2.png)<!-- -->
 
 ``` r
 # Predict the values using the fitted model
@@ -937,7 +983,7 @@ ggplot(plot_data, aes(x = Observed, y = Predicted)) +
   theme_minimal()
 ```
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
 
 ``` r
 ggplt <- ggplot(wave_dat,aes(x=distance_from_first_responder,y=latency_ms,color=size))+
@@ -950,13 +996,13 @@ ggplt+geom_smooth(method=lm,fullrange=TRUE,
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-12-2.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-13-2.png)<!-- -->
 
 ``` r
 ggplt+scale_color_manual(values=c("#E69F00","#0C7BDC"))
 ```
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-12-3.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-13-3.png)<!-- -->
 
 ``` r
 ggplt+scale_color_manual(name='Size',
@@ -966,7 +1012,7 @@ ggplt+scale_color_manual(name='Size',
        legend.text=element_text(size=14))
 ```
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-12-4.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-13-4.png)<!-- -->
 
 ``` r
 #plots 
@@ -985,4 +1031,4 @@ ggplot(wave_dat_fast,aes(x=distance_from_first_responder,y=latency_ms,color=size
 
     ## `geom_smooth()` using formula = 'y ~ x'
 
-![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->

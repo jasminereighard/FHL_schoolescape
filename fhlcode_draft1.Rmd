@@ -188,7 +188,7 @@ summary_table <- cym_dat %>%
 ggplot(summary_table, aes(x = size, y = count, fill = response_type)) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(title = "Frequency of Fast and Slow Responses by Size Group", y = "Frequency") +
-  scale_fill_fish_d(option = "Trimma_lantana") +
+  scale_fill_manual(values = c("gray40", "gray80")) +
   theme_minimal()
 
 
@@ -358,12 +358,11 @@ glm_size_distfr <- glm(latency_ms ~ size + distance_from_first_responder +NND, d
 summary(glm_size_distfr)
 par(mfrow=c(2,2))
 plot(glm_size_distfr)
-#size is more significant
-html_table1 <- stargazer(glm_size_distfr, type = "html")
-cat(html_table1)
 
-#calculate McFadden's R-squared for model for size and distance from first responder glm
+
+#calculate McFadden's R-squared for model for size, distance, NND from first responder glm
 with(summary(glm_size_distfr), 1 - deviance/null.deviance)
+
 
 
 glm_size <- glm(latency_ms ~ size, data = wave_dat_fast, family=Gamma(link = "log"))
@@ -372,6 +371,7 @@ par(mfrow=c(2,2))
 plot(glm_size)
 
 with(summary(glm_size), 1 - deviance/null.deviance)
+
 
 
 #linear model for just the wave
@@ -426,6 +426,58 @@ bar.group(large_size_multicomp$groups, ylim=c(0,650))
 
 
 
+
+
+```
+
+```{r}
+#Plots
+
+
+#Latency vs distance from first responder
+ggplot(wave_dat_fast,aes(x=distance_from_first_responder,y=latency_ms,color=size))+
+         geom_point()+
+         geom_smooth(method=lm,fullrange=TRUE,
+                  aes(color=size))+
+        scale_color_fish_d(option = "Trimma_lantana", name="Size") +
+   theme(legend.title=element_text(size=14),
+       legend.text=element_text(size=14))+
+  labs(x = "Distance from First Responder",
+       y = "Latency (ms)")+
+         theme_classic()
+
+#Latency vs NND
+ggplot(wave_dat_fast,aes(x=NND,y=latency_ms,color=size))+
+         geom_point()+
+         geom_smooth(method=lm,fullrange=TRUE,
+                  aes(color=size))+
+        scale_color_fish_d(option = "Trimma_lantana", name="Size") +
+   theme(legend.title=element_text(size=14),
+       legend.text=element_text(size=14))+
+  labs(x = "NND",
+       y = "Latency (ms)")+
+         theme_classic()
+
+#turning rate for all by responder type
+ggplot(fast_dat,aes(x=NND,y=turning_rate,color=s_w_reactor))+
+         geom_point()+
+         geom_smooth(method=lm,fullrange=TRUE,
+                  aes(color=s_w_reactor))+
+        scale_color_fish_d(option = "Trimma_lantana", name="Reactor") +
+   theme(legend.title=element_text(size=14),
+       legend.text=element_text(size=14))+
+  labs(x = "NND",
+       y = "Turning rate (degree/sec)")
+
+ggplot(fast_dat,aes(x=NND,y=turning_rate,color=size))+
+         geom_point()+
+         geom_smooth(method=lm,fullrange=TRUE,
+                  aes(color=size))+
+        scale_color_fish_d(option = "Trimma_lantana", name="Size") +
+   theme(legend.title=element_text(size=14),
+       legend.text=element_text(size=14))+
+  labs(x = "NND",
+       y = "Turning rate (degree/sec)")
 
 
 ```
