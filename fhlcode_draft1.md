@@ -218,7 +218,7 @@ summary_table <- cym_dat %>%
 ggplot(summary_table, aes(x = size, y = count, fill = response_type)) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(title = "Frequency of Fast and Slow Responses by Size Group", y = "Frequency") +
-  scale_fill_manual(values = c("gray40", "gray80")) +
+  scale_fill_manual(values = c("gray40", "gray80"), name="Response Type") +
   theme_minimal()
 ```
 
@@ -301,8 +301,8 @@ print(manwhit_NND)
 ``` r
 #they are significantly different from each other and further apart!  
 
-boxplot(NND ~ size, data = cym_dat, main = "Nearest Neighbor Distances by Size Class",
-        xlab = "Size", ylab = "Distance (cm)")
+boxplot(NND ~ size, data = cym_dat,
+        xlab = "Size", ylab = "Distance (cm)", col = c("gray40", "gray80"))
 ```
 
 ![](fhlcode_draft1_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
@@ -877,7 +877,8 @@ ggplot(fast_dat,aes(x=NND,y=turning_rate,color=s_w_reactor))+
    theme(legend.title=element_text(size=14),
        legend.text=element_text(size=14))+
   labs(x = "NND",
-       y = "Turning rate (degree/sec)")
+       y = "Turning rate (degree/sec)")+
+         theme_classic()
 ```
 
     ## `geom_smooth()` using formula = 'y ~ x'
@@ -897,7 +898,8 @@ ggplot(fast_dat,aes(x=NND,y=turning_rate,color=size))+
    theme(legend.title=element_text(size=14),
        legend.text=element_text(size=14))+
   labs(x = "NND",
-       y = "Turning rate (degree/sec)")
+       y = "Turning rate (degree/sec)")+
+         theme_classic()
 ```
 
     ## `geom_smooth()` using formula = 'y ~ x'
